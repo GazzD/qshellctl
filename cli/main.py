@@ -1,11 +1,15 @@
 import os
 import shutil
+import subprocess
 import sys
-import typer
-from typing import Optional
-from rich.table import Table
 from os import path
+from typing import Optional
+
+import typer
+from rich.table import Table
+
 import utils.rich_helper as rich
+from cli.shells import shells_app
 
 console = rich.console
 app = typer.Typer(
@@ -13,11 +17,19 @@ app = typer.Typer(
     help="qshellctl: manage shell profiles and system compatibility.",
 )
 
+app.add_typer(shells_app, name="shells")
+
 
 @app.callback()
 def main() -> None:
     """qshellctl root command."""
     pass
+
+
+@app.command()
+def apply() -> None:
+    """Apply shell profile configuration."""
+    rich.print("Applying shell profile configuration...")
 
 
 @app.command()
@@ -39,7 +51,10 @@ def doctor() -> None:
             "ok": git_found,
             "msg": "Installed" if git_found else "Not found",
         },
-        "Linux Distro": {"ok": linux_distro is not None, "msg": linux_distro or "Unknown"},
+        "Linux Distro": {
+            "ok": linux_distro is not None,
+            "msg": linux_distro or "Unknown",
+        },
         "Hyprland": {
             "ok": hyprland_detected,
             "msg": "Detected" if hyprland_detected else "Not active",

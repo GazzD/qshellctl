@@ -1,7 +1,7 @@
 [project]
 name = "qshellctl"
 version = "0.1.0"
-description = "Add your description here"
+description = "Simple tool to handle multiple quickshell configurations"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
