@@ -1,6 +1,6 @@
-from typing import Optional
-from pathlib import Path
 import re
+from pathlib import Path
+from typing import Optional
 
 import typer
 
@@ -247,10 +247,14 @@ def switch_shell(
         hyprland_conf.write_text(new_conf_text)
         rich.print(f"[dim]Updated $profile = {name} in {hyprland_conf}[/dim]")
 
-        # 4. Reload Hyprland — this re-runs exec-once of the new profile.
+        # 4. Reload Hyprland — to apply new profile settings (keybindings, rules, etc.)
         process.run("Reloading Hyprland...", ["hyprctl", "reload"])
 
-        # 5. Persist the new active profile.
+        # 5. Launch the new shell
+        destination_shell = get_shell(name)
+        destination_shell.start()
+
+        # 6. Persist the new active profile.
         current_state["active_profile"] = name
         state.save(current_state)
 
