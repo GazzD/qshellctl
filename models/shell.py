@@ -29,11 +29,11 @@ class Shell(ABC):
 
     Subclasses must declare two class-level attributes:
 
-        name     (str) – unique identifier used as the install dir name
-                         and in CLI commands, e.g. "caelestia".
-        shell_url (str) – git URL of the upstream repository.
-        dots_url (str) – git URL of the upstream dotfiles repository.
-        dots_files (list[str]) – list of dotfiles to install.
+        name      (str) – unique identifier used as the install dir name
+                          and in CLI commands, e.g. "caelestia".
+        shell_url (str) – git URL of the Quickshell config repository.
+        dots_url  (str) – git URL of the dotfiles repository (may be the
+                          same as shell_url when they live in one repo).
 
     Then they must implement :meth:`install` and :meth:`update`.
     All other methods have sensible defaults that subclasses may override.
@@ -42,7 +42,6 @@ class Shell(ABC):
     name: str
     shell_url: str
     dots_url: str
-    dots_files: list[str]
 
     # ------------------------------------------------------------------
     # Filesystem helpers
@@ -123,6 +122,27 @@ class Shell(ABC):
 
         rich.success_message(f"{self.name} shell is installed.")
         rich.print(f"  [dim]Location :[/dim] {self.install_dir}")
+
+    def sync_hypr_profile(self, *, backup: bool = False) -> None:
+        """Sync Hyprland dotfiles into ~/.config/hypr/<name>/.
+
+        Called by :meth:`install` and :meth:`update` in concrete shells that
+        ship their own Hyprland configuration.  No-op by default.
+
+        Args:
+            backup: When True, files that would be overwritten are moved to a
+                    timestamped backup directory before being replaced.
+        """
+
+    def sync_dotfiles(self, *, backup: bool = False) -> None:
+        """Sync general (non-Hyprland) dotfiles to their XDG locations.
+
+        Override in shells that ship dotfiles beyond the Hyprland profile.
+        No-op by default.
+
+        Args:
+            backup: When True, back up any files that would be overwritten.
+        """
 
     def start(self) -> None:
         """Launch the shell (detached). Override for custom launch commands."""
@@ -219,6 +239,29 @@ class GitShell(Shell):
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
+
+    def _rsync(self, src: Path, dst: Path, *, backup: bool = False) -> None:
+        """Rsync *src/* into *dst/*, optionally backing up overwritten files.
+
+        Uses ``--delete`` so that files removed upstream are also removed
+        locally on update.  When *backup* is True, any file that would be
+        overwritten or deleted is first copied to a timestamped sub-directory
+        inside *dst/.backup/<timestamp>/* so the user can recover local edits.
+
+        Args:
+            src:    Source directory.  Its *contents* are synced (trailing /).
+            dst:    Destination directory.  Created if it does not exist.
+            backup: Move files that would be replaced into a backup directory.
+        """
+        from datetime import datetime
+
+        dst.mkdir(parents=True, exist_ok=True)
+        cmd = ["rsync", "-a", "--delete", f"{src}/", f"{dst}/"]
+        if backup:
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            backup_dir = dst / ".backup" / timestamp
+            cmd += [f"--backup-dir={backup_dir}"]
+        process.run("Syncing files...", cmd)
 
     def _ensure_deps(self, yes: bool = False) -> None:
         """Check all deps and offer to install missing ones.
