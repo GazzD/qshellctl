@@ -1,8 +1,10 @@
 from pathlib import Path
 from typing import Optional
 
+import utils.rich_helper as rich
 from models.dep import Dep
 from models.shell import CMakeShell, GitShell
+from utils import process
 from utils.checkers import font, pacman_q, pkgconfig, which
 from utils.process import run
 
@@ -60,7 +62,7 @@ II_RUNTIME_DEPS: list[Dep] = [
 class IllogicalImpulseShell(GitShell):
     """Illogical Impulse shell — https://github.com/end-4/dots-hyprland/."""
 
-    name = "illogical-impulse"
+    name = "ii"
     shell_url = "https://github.com/end-4/dots-hyprland.git"
 
     @property
@@ -85,3 +87,11 @@ class IllogicalImpulseShell(GitShell):
             "Installing config files",
             ["ln -s", str(II_HYPR_CONFIG_DIR), str(USER_HYPR_CONFIG_DIR / self.name)],
         )
+
+    def stop(self) -> None:
+        """Stop illogical impulse shell."""
+        code = process.run(
+            "Killing current shell...", ["pkill", "-x", "qs"], ok_codes=(0, 1)
+        )
+        if code == 1:
+            rich.print("[dim]No shell was running.[/dim]")

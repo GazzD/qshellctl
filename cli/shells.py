@@ -226,7 +226,7 @@ def switch_shell(
         raise typer.Exit(code=1)
 
     try:
-        # 2. Stop the currently active shell (not the destination).
+        # 2. Stop the currently active shell
         active_profile = current_state.get("active_profile")
         if active_profile and active_profile != name:
             try:
