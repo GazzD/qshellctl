@@ -1,6 +1,7 @@
 from models.exceptions import ShellNotFoundError
 from models.shell import Shell
 from shells.caelestia import CaelestiaShell
+from shells.ii import IllogicalImpulseShell
 
 # ---------------------------------------------------------------------------
 # Registry
@@ -11,6 +12,7 @@ from shells.caelestia import CaelestiaShell
 
 REGISTRY: dict[str, type[Shell]] = {
     "caelestia": CaelestiaShell,
+    "ii": IllogicalImpulseShell,
 }
 
 

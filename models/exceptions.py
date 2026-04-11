@@ -18,6 +18,10 @@ class DependencyError(ShellError):
     """Raised when required dependencies are still missing after an install attempt."""
 
 
+class HyprlandProfileNotFoundError(ShellError):
+    """Raised when the Hyprland profile directory for a shell does not exist."""
+
+
 class ProcessError(Exception):
     """Raised when a subprocess command exits with an unexpected return code."""
 

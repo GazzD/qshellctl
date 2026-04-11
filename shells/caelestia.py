@@ -1,6 +1,9 @@
+from pathlib import Path
+
 from models.dep import Dep
 from models.shell import CMakeShell
 from utils.checkers import font, pacman_q, pkgconfig, which
+import utils.process as process
 
 # ---------------------------------------------------------------------------
 # Dependency lists
@@ -50,10 +53,59 @@ class CaelestiaShell(CMakeShell):
     """Caelestia shell — https://github.com/caelestia-dots/shell."""
 
     name = "caelestia"
-    repo_url = "https://github.com/caelestia-dots/shell.git"
+    shell_url = "https://github.com/caelestia-dots/shell.git"
+    dots_url = "https://github.com/caelestia-dots/caelestia.git"
+
+    @property
+    def dots_dir(self) -> Path:
+        """Local clone of the caelestia dotfiles repo."""
+        return Path.home() / ".cache" / "caelestia-dots"
 
     def build_deps(self) -> list[Dep]:
         return CAELESTIA_BUILD_DEPS
 
     def runtime_deps(self) -> list[Dep]:
         return CAELESTIA_RUNTIME_DEPS
+
+    def install(
+        self,
+        branch: str | None = None,
+        yes: bool = False,
+        skip_deps: bool = False,
+    ) -> None:
+        super().install(branch=branch, yes=yes, skip_deps=skip_deps)
+        self.sync_hypr_profile()
+
+    def update(self) -> None:
+        super().update()
+        self.sync_hypr_profile(backup=True)
+
+    def stop(self) -> None:
+        """Stop caelestia using its own CLI kill command."""
+        process.run(
+            "Killing caelestia shell...", ["caelestia", "shell", "-k"], ok_codes=(0, 1)
+        )
+
+    # ------------------------------------------------------------------
+    # Dotfile sync
+    # ------------------------------------------------------------------
+
+    def sync_hypr_profile(self, *, backup: bool = False) -> None:
+        """Clone (or update) the caelestia dotfiles repo and sync the
+        Hyprland config into ~/.config/hypr/caelestia/.
+        """
+        if not self.dots_dir.exists():
+            process.run(
+                "Cloning caelestia dotfiles...",
+                ["git", "clone", self.dots_url, str(self.dots_dir)],
+            )
+        else:
+            process.run(
+                "Updating caelestia dotfiles...",
+                ["git", "pull"],
+                cwd=self.dots_dir,
+            )
+
+        src = self.dots_dir / ".config" / "hypr"
+        dst = Path.home() / ".config" / "hypr" / self.name
+        self._rsync(src, dst, backup=backup)
