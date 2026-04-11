@@ -31,14 +31,18 @@ class Shell(ABC):
 
         name     (str) – unique identifier used as the install dir name
                          and in CLI commands, e.g. "caelestia".
-        repo_url (str) – git URL of the upstream repository.
+        shell_url (str) – git URL of the upstream repository.
+        dots_url (str) – git URL of the upstream dotfiles repository.
+        dots_files (list[str]) – list of dotfiles to install.
 
     Then they must implement :meth:`install` and :meth:`update`.
     All other methods have sensible defaults that subclasses may override.
     """
 
     name: str
-    repo_url: str
+    shell_url: str
+    dots_url: str
+    dots_files: list[str]
 
     # ------------------------------------------------------------------
     # Filesystem helpers
@@ -143,7 +147,7 @@ class GitShell(Shell):
 
     Provides a full default lifecycle based on git clone / pull.
     Shells that only need their dotfiles cloned can inherit directly from
-    this class without overriding anything beyond ``name``, ``repo_url``
+    this class without overriding anything beyond ``name``, ``shell_url``
     and the optional ``*_deps`` methods.
     """
 
@@ -168,7 +172,7 @@ class GitShell(Shell):
         if not skip_deps:
             self._ensure_deps(yes=yes)
 
-        clone_cmd = ["git", "clone", self.repo_url, str(self.install_dir)]
+        clone_cmd = ["git", "clone", self.shell_url, str(self.install_dir)]
         if branch:
             clone_cmd += ["--branch", branch]
         process.run(

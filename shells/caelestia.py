@@ -1,6 +1,7 @@
 from models.dep import Dep
 from models.shell import CMakeShell
 from utils.checkers import font, pacman_q, pkgconfig, which
+import utils.process as process
 
 # ---------------------------------------------------------------------------
 # Dependency lists
@@ -50,10 +51,18 @@ class CaelestiaShell(CMakeShell):
     """Caelestia shell — https://github.com/caelestia-dots/shell."""
 
     name = "caelestia"
-    repo_url = "https://github.com/caelestia-dots/shell.git"
+    shell_url = "https://github.com/caelestia-dots/shell.git"
+    dots_url = "https://github.com/caelestia-dots/caelestia.git"
+    dots_files = []
 
     def build_deps(self) -> list[Dep]:
         return CAELESTIA_BUILD_DEPS
 
     def runtime_deps(self) -> list[Dep]:
         return CAELESTIA_RUNTIME_DEPS
+
+    def stop(self) -> None:
+        """Stop caelestia using its own CLI kill command."""
+        process.run(
+            "Killing caelestia shell...", ["caelestia", "shell", "-k"], ok_codes=(0, 1)
+        )

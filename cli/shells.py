@@ -1,9 +1,13 @@
 from typing import Optional
+from pathlib import Path
+import re
 
 import typer
 
 import utils.deps as deps_utils
+import utils.process as process
 import utils.rich_helper as rich
+import utils.state as state
 from models.exceptions import (
     DependencyError,
     ProcessError,
@@ -201,10 +205,56 @@ def shell_status(
 def switch_shell(
     name: str = typer.Argument(..., help="Shell name to switch to (e.g. caelestia)."),
 ) -> None:
-    """Stop the currently running shell and start another."""
-    shell = _resolve(name)
+    """Switch the active Hyprland profile and restart the shell."""
+    # Validate the shell name exists in the registry before doing anything.
+    _resolve(name)
+
+    # 1. Validate the Hyprland profile exists before doing anything destructive.
+    current_state = state.load()
+    hyprland_conf = Path(
+        current_state.get(
+            "hyprland_conf", Path.home() / ".config" / "hypr" / "hyprland.conf"
+        )
+    )
+    profile_conf = hyprland_conf.parent / name / "hyprland.conf"
+
+    if not profile_conf.exists():
+        rich.error_message(
+            f"Hyprland profile not found: {profile_conf}\n"
+            f"  Create ~/.config/hypr/{name}/ with a hyprland.conf before switching."
+        )
+        raise typer.Exit(code=1)
+
     try:
-        shell.stop()
-        shell.start()
+        # 2. Stop the currently active shell (not the destination).
+        active_profile = current_state.get("active_profile")
+        if active_profile and active_profile != name:
+            try:
+                active_shell = get_shell(active_profile)
+                active_shell.stop()
+            except ShellNotFoundError:
+                # Active profile may be 'default' or unregistered — skip gracefully.
+                pass
+
+        # 3. Edit $profile = <name> in hyprland.conf.
+        conf_text = hyprland_conf.read_text()
+        new_conf_text = re.sub(
+            r"^\$profile\s*=\s*\S+",
+            f"$profile = {name}",
+            conf_text,
+            flags=re.MULTILINE,
+        )
+        hyprland_conf.write_text(new_conf_text)
+        rich.print(f"[dim]Updated $profile = {name} in {hyprland_conf}[/dim]")
+
+        # 4. Reload Hyprland — this re-runs exec-once of the new profile.
+        process.run("Reloading Hyprland...", ["hyprctl", "reload"])
+
+        # 5. Persist the new active profile.
+        current_state["active_profile"] = name
+        state.save(current_state)
+
+        rich.success_message(f"Switched to {name}.")
+
     except (ShellError, ProcessError) as exc:
         _handle_shell_error(exc)
