@@ -1,6 +1,5 @@
 import os
 import shutil
-import subprocess
 import sys
 from os import path
 from typing import Optional
