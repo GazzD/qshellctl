@@ -211,6 +211,11 @@ def switch_shell(
 
     # 1. Validate the Hyprland profile exists before doing anything destructive.
     current_state = state.load()
+
+    if name == current_state.get("active_profile"):
+        rich.print(f"Shell {name} is already active.")
+        raise typer.Exit()
+
     hyprland_conf = Path(
         current_state.get(
             "hyprland_conf", Path.home() / ".config" / "hypr" / "hyprland.conf"

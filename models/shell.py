@@ -123,7 +123,8 @@ class Shell(ABC):
         rich.success_message(f"{self.name} shell is installed.")
         rich.print(f"  [dim]Location :[/dim] {self.install_dir}")
 
-    def sync_hypr_profile(self, *, backup: bool = False) -> None:
+    @abstractmethod
+    def sync_hypr_profile(self, *, backup: bool = True) -> None:
         """Sync Hyprland dotfiles into ~/.config/hypr/<name>/.
 
         Called by :meth:`install` and :meth:`update` in concrete shells that
@@ -134,7 +135,8 @@ class Shell(ABC):
                     timestamped backup directory before being replaced.
         """
 
-    def sync_dotfiles(self, *, backup: bool = False) -> None:
+    @abstractmethod
+    def sync_dotfiles(self, *, backup: bool = True) -> None:
         """Sync general (non-Hyprland) dotfiles to their XDG locations.
 
         Override in shells that ship dotfiles beyond the Hyprland profile.
@@ -205,8 +207,28 @@ class GitShell(Shell):
                 f"{self.name} does not appear to be installed at {self.install_dir}. "
                 f"Run 'qshellctl shells install {self.name}' first."
             )
-        process.run("Stash possible changes...", ["git", "stash"], cwd=self.install_dir)
+        previous_stash = subprocess.run(
+            ["git", "rev-parse", "-q", "--verify", "refs/stash"],
+            cwd=self.install_dir,
+            capture_output=True,
+            text=True,
+        )
+        process.run("Stash possible changes...", ["git", "stash", "push"], cwd=self.install_dir)
+        current_stash = subprocess.run(
+            ["git", "rev-parse", "-q", "--verify", "refs/stash"],
+            cwd=self.install_dir,
+            capture_output=True,
+            text=True,
+        )
+        created_stash = (
+            current_stash.returncode == 0
+            and current_stash.stdout.strip() != previous_stash.stdout.strip()
+        )
         process.run("Pulling latest changes...", ["git", "pull"], cwd=self.install_dir)
+        if created_stash:
+            process.run(
+                "Pop stash (if any)...", ["git", "stash", "pop"], cwd=self.install_dir
+            )
 
     def status(self) -> None:
         if not self.is_installed():

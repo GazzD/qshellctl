@@ -156,15 +156,28 @@ class IllogicalImpulseShell(GitShell):
         # git stash + git pull
         super().update()
         # Rsync updated dotfiles, backing up any local changes first.
-        self.sync_hypr_profile(backup=True)
+        # self.sync_hypr_profile(backup=True)
+        self.sync_quickshell()
         rich.success_message(f"{self.name} shell updated.")
 
     # ------------------------------------------------------------------
     # Dotfile sync
     # ------------------------------------------------------------------
 
-    def sync_hypr_profile(self, *, backup: bool = False) -> None:
+    def sync_dotfiles(self, *, backup: bool = True) -> None:
+        """Sync dotfiles from the repo into the home directory."""
+        src = self.install_dir / "dots" / ".config"
+        dst = Path.home() / ".config"
+        self._rsync(src, dst, backup=backup)
+
+    def sync_hypr_profile(self, *, backup: bool = True) -> None:
         """Sync dots-hyprland's hypr config into ~/.config/hypr/ii/."""
         src = self.install_dir / "dots" / ".config" / "hypr"
         dst = Path.home() / ".config" / "hypr" / self.name
+        self._rsync(src, dst, backup=backup)
+
+    def sync_quickshell(self, *, backup: bool = True) -> None:
+        """Sync dots-hyprland's quickshell config into ~/.config/quickshell/ii/."""
+        src = self.install_dir / "dots" / ".config" / "quickshell" / "ii"
+        dst = Path.home() / ".config" / "quickshell" / self.name
         self._rsync(src, dst, backup=backup)

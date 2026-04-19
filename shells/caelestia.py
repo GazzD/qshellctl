@@ -1,9 +1,9 @@
 from pathlib import Path
 
+import utils.process as process
 from models.dep import Dep
 from models.shell import CMakeShell
 from utils.checkers import font, pacman_q, pkgconfig, which
-import utils.process as process
 
 # ---------------------------------------------------------------------------
 # Dependency lists
@@ -78,7 +78,7 @@ class CaelestiaShell(CMakeShell):
 
     def update(self) -> None:
         super().update()
-        self.sync_hypr_profile(backup=True)
+        # self.sync_hypr_profile(backup=True)
 
     def stop(self) -> None:
         """Stop caelestia using its own CLI kill command."""
@@ -89,6 +89,13 @@ class CaelestiaShell(CMakeShell):
     # ------------------------------------------------------------------
     # Dotfile sync
     # ------------------------------------------------------------------
+
+    def sync_dotfiles(self, *, backup: bool = True) -> None:
+        """Sync dotfiles from the repo into the home directory."""
+        # FIXME: Caelestia dotfiles have hypr folder, syncing directly may overwrite, think about a better approach
+        # src = self.dots_dir
+        # dst = Path.home() / ".config"
+        # self._rsync(src, dst, backup=backup)
 
     def sync_hypr_profile(self, *, backup: bool = False) -> None:
         """Clone (or update) the caelestia dotfiles repo and sync the
