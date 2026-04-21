@@ -44,3 +44,13 @@ class DefaultShell(Shell):
     def status(self) -> None:
         rich.success_message("default profile is always available.")
         rich.print(f"  [dim]Location :[/dim] ~/.config/hypr/{self.name}/")
+
+    # ------------------------------------------------------------------
+    # Dotfile sync
+    # ------------------------------------------------------------------
+
+    def sync_dotfiles(self, *, backup: bool = True) -> None:
+        """No-op: the default profile has no dotfiles to sync."""
+
+    def sync_hypr_profile(self, *, backup: bool = False) -> None:
+        """No-op: the default profile is always available and does not need a Hyprland profile sync."""

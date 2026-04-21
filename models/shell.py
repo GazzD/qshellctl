@@ -91,7 +91,7 @@ class Shell(ABC):
 
     @abstractmethod
     def update(self) -> None:
-        """Pull the latest changes and apply them (e.g. rebuild)."""
+        """Update a shell from upstream and apply its shell-specific update flow."""
 
     # ------------------------------------------------------------------
     # Lifecycle — default implementations (safe to override)
@@ -213,7 +213,9 @@ class GitShell(Shell):
             capture_output=True,
             text=True,
         )
-        process.run("Stash possible changes...", ["git", "stash", "push"], cwd=self.install_dir)
+        process.run(
+            "Stash possible changes...", ["git", "stash", "push"], cwd=self.install_dir
+        )
         current_stash = subprocess.run(
             ["git", "rev-parse", "-q", "--verify", "refs/stash"],
             cwd=self.install_dir,

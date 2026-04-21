@@ -1,10 +1,12 @@
+import shutil
 from pathlib import Path
 from typing import Optional
 
 import utils.process as process
 import utils.rich_helper as rich
 from models.dep import Dep
-from models.shell import GitShell
+from models.exceptions import ShellError, ShellNotInstalledError
+from models.shell import GitShell, QUICKSHELL_CONFIG_DIR
 from utils.checkers import pacman_q, which
 
 II_DOTFILES_DIR = Path.home() / ".cache" / "dots-hyprland"
@@ -103,6 +105,13 @@ class IllogicalImpulseShell(GitShell):
     def install_dir(self) -> Path:
         return II_DOTFILES_DIR
 
+    @property
+    def quickshell_dir(self) -> Path:
+        return QUICKSHELL_CONFIG_DIR / self.name
+
+    def is_installed(self) -> bool:
+        return self.install_dir.exists() and self.quickshell_dir.exists()
+
     def runtime_deps(self) -> list[Dep]:
         return II_RUNTIME_DEPS
 
@@ -116,11 +125,11 @@ class IllogicalImpulseShell(GitShell):
         yes: bool = False,
         skip_deps: bool = False,
     ) -> None:
-        # 1.Clone repo. Dependency checks are delegated to ./setup install-deps
+        # Clone repo. Dependency checks are delegated to ./setup install-deps
         #    below, so we always pass skip_deps=True to the git clone step.
         super().install(branch=branch, yes=yes, skip_deps=True)
 
-        # 2. Phase 1 — install AUR meta-packages via the upstream script.
+        # Install AUR meta-packages via the upstream script.
         if not skip_deps:
             flags = ["--skip-sysupdate"]
             if yes:
@@ -131,7 +140,7 @@ class IllogicalImpulseShell(GitShell):
                 cwd=self.install_dir,
             )
 
-        # 3. Phase 2 — permissions, systemd services, python venv, gsettings.
+        # Configure permissions, systemd services, python venv, gsettings.
         setup_flags = ["--skip-sysupdate"]
         if yes:
             setup_flags += ["-f"]
@@ -141,12 +150,19 @@ class IllogicalImpulseShell(GitShell):
             cwd=self.install_dir,
         )
 
-        # 4. Rsync Hyprland dotfiles into the ii profile directory.
+        # Rsync Hyprland dotfiles into the ii profile directory.
         self.sync_hypr_profile()
 
-        rich.success_message(f"{self.name} shell installed.")
+        # Rsync Hyprland quickshell config into the ii profile directory.
+        self.sync_quickshell()
+
+        rich.success_message(f"{self.name} source repo cloned and local config bootstrapped.")
         rich.print(
             f"[dim]Hyprland profile created at [bold]~/.config/hypr/{self.name}/[/bold][/dim]"
+        )
+        rich.print(
+            "[dim]Quickshell config deployed to "
+            f"[bold]~/.config/quickshell/{self.name}/[/bold][/dim]"
         )
         rich.print(
             f"[dim]Switch to it with: [bold]qshellctl shells switch {self.name}[/bold][/dim]"
@@ -158,7 +174,26 @@ class IllogicalImpulseShell(GitShell):
         # Rsync updated dotfiles, backing up any local changes first.
         # self.sync_hypr_profile(backup=True)
         self.sync_quickshell()
-        rich.success_message(f"{self.name} shell updated.")
+        rich.success_message(
+            f"{self.name} source repo updated and Quickshell config synced."
+        )
+
+    def uninstall(self) -> None:
+        paths_to_remove = [path for path in (self.install_dir, self.quickshell_dir) if path.exists()]
+        if not paths_to_remove:
+            raise ShellNotInstalledError(
+                f"Nothing to remove: neither {self.install_dir} nor {self.quickshell_dir} exist."
+            )
+
+        for path in paths_to_remove:
+            try:
+                shutil.rmtree(path)
+            except OSError as exc:
+                raise ShellError(f"Failed to remove {path}: {exc}") from exc
+
+        rich.success_message(
+            f"Removed {', '.join(str(path) for path in paths_to_remove)}."
+        )
 
     # ------------------------------------------------------------------
     # Dotfile sync

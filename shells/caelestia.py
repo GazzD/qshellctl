@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import utils.process as process
+import utils.rich_helper as rich
 from models.dep import Dep
 from models.shell import CMakeShell
 from utils.checkers import font, pacman_q, pkgconfig, which
@@ -75,10 +76,18 @@ class CaelestiaShell(CMakeShell):
     ) -> None:
         super().install(branch=branch, yes=yes, skip_deps=skip_deps)
         self.sync_hypr_profile()
+        rich.print(
+            "[dim]Hyprland profile bootstrapped at "
+            f"[bold]~/.config/hypr/{self.name}/[/bold][/dim]"
+        )
 
     def update(self) -> None:
         super().update()
         # self.sync_hypr_profile(backup=True)
+        rich.print(
+            "[dim]Hyprland profile was left untouched. "
+            "Update it manually if you want upstream profile changes.[/dim]"
+        )
 
     def stop(self) -> None:
         """Stop caelestia using its own CLI kill command."""

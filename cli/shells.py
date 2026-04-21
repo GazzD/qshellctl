@@ -18,7 +18,7 @@ from models.exceptions import (
 )
 from shells import get_shell, list_shells
 
-shells_app = typer.Typer(help="Manage Quickshell shell installations.")
+shells_app = typer.Typer(help="Manage Quickshell shells and profile-aware installs.")
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +71,7 @@ def check_deps(
         help="Skip confirmation prompts when installing.",
     ),
 ) -> None:
-    """Check (and optionally install) the dependencies for a shell."""
+    """Check and optionally install dependencies for a shell."""
     shell = _resolve(name)
     all_deps = shell.all_deps()
 
@@ -131,7 +131,7 @@ def install_shell(
         help="Auto-confirm all prompts, including dependency installation.",
     ),
 ) -> None:
-    """Install a shell to ~/.config/quickshell/<name>."""
+    """Install a shell and bootstrap its local configuration."""
     shell = _resolve(name)
 
     try:
@@ -150,7 +150,7 @@ def install_shell(
 def update_shell(
     name: str = typer.Argument(..., help="Shell name (e.g. caelestia)."),
 ) -> None:
-    """Update a shell by pulling the latest changes and rebuilding."""
+    """Update a shell from upstream and apply its shell-specific update flow."""
     shell = _resolve(name)
     try:
         shell.update()
@@ -174,7 +174,7 @@ def uninstall_shell(
         help="Skip the confirmation prompt.",
     ),
 ) -> None:
-    """Remove a shell's config files from ~/.config/quickshell/<name>."""
+    """Remove an installed shell and any managed files."""
     shell = _resolve(name)
 
     if not yes:
@@ -196,7 +196,7 @@ def uninstall_shell(
 def shell_status(
     name: str = typer.Argument(..., help="Shell name (e.g. caelestia)."),
 ) -> None:
-    """Show the installation status of a shell."""
+    """Show the installation status and source revision of a shell."""
     shell = _resolve(name)
     shell.status()
 
@@ -205,7 +205,7 @@ def shell_status(
 def switch_shell(
     name: str = typer.Argument(..., help="Shell name to switch to (e.g. caelestia)."),
 ) -> None:
-    """Switch the active Hyprland profile and restart the shell."""
+    """Switch the active Hyprland profile and launch the target shell."""
     # Validate the shell name exists in the registry before doing anything.
     _resolve(name)
 
