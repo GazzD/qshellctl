@@ -8,6 +8,7 @@ import typer
 from rich.table import Table
 
 import utils.rich_helper as rich
+import utils.state as state
 from cli.shells import shells_app
 
 console = rich.console
@@ -26,21 +27,16 @@ def main() -> None:
 
 
 @app.command()
-def apply() -> None:
-    """Apply shell profile configuration."""
-    rich.print("Applying shell profile configuration...")
-
-
-@app.command()
 def doctor() -> None:
     """Run system checks and report compatibility issues."""
     rich.print("Running system checks for qshellctl...")
 
     # --- 1. Data gathering ---
     git_found = shutil.which("git") is not None
-    python_version_ok = sys.version_info >= (3, 10)
+    python_version_ok = sys.version_info >= (3, 12)
     hyprland_detected = "HYPRLAND_INSTANCE_SIGNATURE" in os.environ
     linux_distro = get_linux_distro()
+    bootstrap_status = state.detect_bootstrap()
     checks = {
         "Python": {
             "ok": python_version_ok,
@@ -57,6 +53,10 @@ def doctor() -> None:
         "Hyprland": {
             "ok": hyprland_detected,
             "msg": "Detected" if hyprland_detected else "Not active",
+        },
+        "Profile Bootstrap": {
+            "ok": bootstrap_status.initialized,
+            "msg": bootstrap_status.detail(),
         },
     }
 
