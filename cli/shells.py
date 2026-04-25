@@ -41,6 +41,15 @@ def _handle_shell_error(exc: Exception) -> None:
     raise typer.Exit(code=1)
 
 
+def _require_bootstrap() -> None:
+    """Exit with guidance when the Hyprland profile system is not initialized."""
+    if state.is_bootstrapped():
+        return
+    rich.error_message("Hyprland profile system is not initialized yet.")
+    rich.print("[dim]Run [bold]qshellctl init[/bold] first.[/dim]")
+    raise typer.Exit(code=1)
+
+
 # ---------------------------------------------------------------------------
 # Commands
 # ---------------------------------------------------------------------------
@@ -133,6 +142,8 @@ def install_shell(
 ) -> None:
     """Install a shell and bootstrap its local configuration."""
     shell = _resolve(name)
+    if name != "default":
+        _require_bootstrap()
 
     try:
         shell.install(branch=branch, yes=yes, skip_deps=skip_deps)
@@ -206,6 +217,8 @@ def switch_shell(
     name: str = typer.Argument(..., help="Shell name to switch to (e.g. caelestia)."),
 ) -> None:
     """Switch the active Hyprland profile and launch the target shell."""
+    _require_bootstrap()
+
     # Validate the shell name exists in the registry before doing anything.
     _resolve(name)
 
