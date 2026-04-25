@@ -29,3 +29,7 @@ class ProcessError(Exception):
         super().__init__(message)
         self.cmd = cmd
         self.returncode = returncode
+
+
+class BootstrapError(Exception):
+    """Raised when qshellctl cannot initialize the Hyprland profile system."""

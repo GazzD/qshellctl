@@ -9,6 +9,8 @@ from rich.table import Table
 
 import utils.rich_helper as rich
 import utils.state as state
+from models.exceptions import BootstrapError
+from utils.bootstrap import initialize_profile_system
 from cli.shells import shells_app
 
 console = rich.console
@@ -24,6 +26,64 @@ app.add_typer(shells_app, name="shells")
 def main() -> None:
     """qshellctl root command."""
     pass
+
+
+@app.command()
+def init(
+    yes: bool = typer.Option(
+        False,
+        "--yes",
+        "-y",
+        help="Skip the confirmation prompt.",
+    ),
+) -> None:
+    """Initialize qshellctl's Hyprland profile system."""
+    bootstrap_status = state.detect_bootstrap()
+    if bootstrap_status.initialized:
+        rich.success_message("Hyprland profile system is already initialized.")
+        raise typer.Exit()
+
+    if not bootstrap_status.hyprland_conf_exists:
+        rich.error_message(
+            "Hyprland config not found at ~/.config/hypr/hyprland.conf. "
+            "Create it before running qshellctl init."
+        )
+        raise typer.Exit(code=1)
+
+    rich.print("[bold]qshellctl will initialize your Hyprland profile system.[/bold]")
+    rich.print("[dim]This will:[/dim]")
+    rich.print("  [cyan]•[/cyan] create ~/.config/hypr/default/ if needed")
+    rich.print("  [cyan]•[/cyan] copy your current Hyprland config into that profile")
+    rich.print("  [cyan]•[/cyan] back up ~/.config/hypr/hyprland.conf")
+    rich.print("  [cyan]•[/cyan] rewrite the root config as a profile selector")
+    rich.print("  [cyan]•[/cyan] save initial state with active_profile = default")
+
+    if not yes:
+        typer.confirm("Continue?", abort=True)
+
+    try:
+        result = initialize_profile_system()
+    except BootstrapError as exc:
+        rich.error_message(str(exc))
+        raise typer.Exit(code=1)
+
+    rich.success_message("Initialized Hyprland profile system.")
+    rich.print(
+        f"[dim]Default profile :[/dim] [bold]{result.default_profile_dir}[/bold]"
+    )
+    if result.backup_path is not None:
+        rich.print(f"[dim]Root backup     :[/dim] [bold]{result.backup_path}[/bold]")
+    if result.copied_entries:
+        rich.print(f"[dim]Copied entries  :[/dim] {result.copied_entries}")
+    if result.root_rewritten:
+        rich.print(
+            "[dim]Root hyprland.conf now uses:[/dim] "
+            "[bold]$profile = default[/bold]"
+        )
+    rich.print(
+        "[dim]Next step: install a shell with "
+        "[bold]qshellctl shells install <name>[/bold][/dim]"
+    )
 
 
 @app.command()
